@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="./plane.css">
+    <title>打飞机</title>
+</head>
+
+<body>
+    <div id='main'>
+        <div class="title">
+            <div>杀敌: <span class="killNum">0</span></div>
+            <div>分数: <span class="killScore">0</span></div>
+            <div>血量: <span class="blood">5</span></div>
+
+            <div class="icon iconfont btnctrl" onclick="ctrlopen_close()">&#xe6b9;</div>
+        </div>
+        <div id="wrap">
+            <button class="continuebtn" onclick="btncontinue()">继续游戏</button>
+            <button class="newbtn" onclick="btnnew()">新游戏</button>
+            <button class="closebtn" onclick="btnclose()">退出游戏</button>
+        </div>
+    </div>
+    <audio class='audio' src="./audio/高山流水.mp3"></audio>
+    <!-- <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe60f;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe685;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe628;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe632;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe642;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe6d0;</span>
+
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe610;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe729;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe63c;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe627;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe612;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe6b4;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe602;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe6ee;</span> 
+
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe67e;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe602;</span>
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe624;</span>
+
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe701;</span>
+
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe6b9;</span> 
+    <span class="icon iconfont" style="font-size: 50px;color: green;">&#xe607;</span>  -->
+
+
+    <script>
+        var mainobj = document.getElementById("main");
+        var smallplaneArray = [];   //敌方小飞机数组
+        var bigplaneArray = []      //敌方大飞机数组 
+        var bulletArray = [];       //子弹数组
+        var leftBtn = false;        //我方飞机左移
+        var rightBtn = false;       //右移
+        var upBtn = false;          //上移
+        var downBtn = false;        //下移
+        var killNum = document.getElementsByClassName("killNum")[0];
+        var killScore = document.getElementsByClassName("killScore")[0];
+
+        var smallplaneTimer = setInterval(creatSmallPlane, 2000);     //没隔2秒钟创建一架敌方小飞机
+        // var bigplaneTimer = setInterval(creatBigPlane,2000);          //每隔2秒钟创建一架敌方大飞机
+        var planeMoverTimer = setInterval(smallPlaneMove,100);       //小飞机移动
+        // var bigplaneMoverTimer = setInterval(bigplaneMove,100);         //大飞机移动
+        var bulletMoverTimer = setInterval(bulletMove, 100);           //子弹移动
+        var crashcheckTimer = setInterval(crashCheck, 50);            //判断碰撞
+        var ctrlplayTimer = setInterval(ctrlPlay, 50)               //按键监听
+
+        var player = new PlayerPlaneProto("&#xe610;", 180, 530, 10);
+
+        //创建敌方小飞机
+        /*
+        属性：
+            图片节点
+            图片
+            x坐标
+            y坐标
+            速度
+        方法：
+            移动
+            初始化  把图片节点添加到main页面
+        */
+        function SmallPlaneProto(spanClassName, x, y, speed) {
+            this.imgNode = document.createElement("span");
+            this.imgNode.innerHTML = spanClassName;
+            this.x = x;
+            this.y = y;
+            this.speed = speed;
+            this.isDead = false;                //地方小飞机死亡状态
+            this.exTime = 10;                   //敌方小飞机死亡倒计时
+            this.init = function () {
+                this.imgNode.setAttribute('class', "icon iconfont");
+                this.imgNode.style.position = "absolute";
+                this.imgNode.style.left = this.x + 'px';
+                this.imgNode.style.top = this.y + 'px';
+                this.imgNode.style.fontSize = "20px";
+                mainobj.appendChild(this.imgNode);//添加到main中
+            }
+            this.init();
+            this.move = function () {
+                this.imgNode.style.top = parseInt(this.imgNode.style.top) + this.speed + 'px';
+            }
+        }
+        //创建敌方小飞机数组函数
+        function creatSmallPlane() {
+            var smallplane = new SmallPlaneProto("&#xe60f;", parseInt(Math.random() * 456), parseInt(Math.random() * 100), parseInt(Math.random() * 10 + 1));
+            smallplaneArray.push(smallplane);
+        }
+        //小飞机的移动
+        function smallPlaneMove() {
+            for (let i = 0; i < smallplaneArray.length; i++) {
+                if (smallplaneArray[i].isDead == false) {
+                    smallplaneArray[i].move();
+                    if (parseInt(smallplaneArray[i].imgNode.style.top) >= 600) {
+                        mainobj.removeChild(smallplaneArray[i].imgNode);//数组中的对象的属性是节点
+                        smallplaneArray.splice(i, 1);
+                    }
+                } else {
+                    //当敌方小飞机死亡
+                    smallplaneArray[i].exTime--;
+                    if (smallplaneArray[i].exTime == 0) {
+                        mainobj.removeChild(smallplaneArray[i].imgNode);//数组中的对象的属性是节点
+                        smallplaneArray.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        //创建敌方大飞机
+        /*
+        属性：
+            innerHTML字符串
+            x坐标
+            y坐标
+            速度
+        方法：
+            初始化
+            移动
+        */
+        function BigPlaneProto(spanClassName,x,y,speed){
+            this.imgNode = document.createElement('span');
+            this.imgNode.innerHTML = spanClassName;
+            this.x=x;
+            this.y=y;
+            this.speed=speed;
+            this.init = function(){
+                this.imgNode.setAttribute('class','icon iconfont');
+                this.imgNode.style.top = this.y + 'px';
+                this.imgNode.style.left= this.x + 'px';
+                this.imgNode.style.color = 'green';
+                this.imgNode.style.fontSize = '40px';
+                mainobj.appendChild(this.imgNode);
+            }
+            this.init();
+            this.move = function(){
+                this.imgNode.style.top = parseInt(this.imgNode.style.top) + this.speed + 'px';
+            }
+        }
+        //创建敌方大飞机数组函数
+        function creatBigPlane() {
+            var bigplane = new BigPlaneProto('&#xe6d0;', parseInt(Math.random() * 456), parseInt(Math.random() * 100), parseInt(Math.random() * 10 + 1));
+            bigplaneArray.push(bigplane);
+        }
+        //敌方大飞机移动
+        // function bigplaneMove() {
+        //     for(let i=0;i< bigplaneArray.length;i++){
+        //         bigplaneArray[i].move();
+        //         if(parseInt(bigplaneArray[i].imgNode.style.top)>=600){
+        //             mainobj.removeChild(bigplaneArray[i].imgNode);
+        //             bigplaneArray.splice(i,1);
+        //         }
+        //     }
+        // }
+
+        //创建玩家飞机
+        /*
+        属性：
+            图片节点
+            图片
+            x坐标
+            y坐标
+            速度
+        方法：
+            初始化
+            移动
+            发射子弹
+        */
+        function PlayerPlaneProto(playerClassName, x, y, speed) {
+            this.imgNode = document.createElement('span');
+            this.imgNode.innerHTML = playerClassName;
+            this.x = x;
+            this.y = y;
+            this.speed = speed;
+            this.init = function () {
+                this.imgNode.setAttribute("class", "icon iconfont");
+                this.imgNode.style.position = "absolute";
+                this.imgNode.style.top = this.y + 'px';
+                this.imgNode.style.left = this.x + 'px';
+                this.imgNode.style.fontSize = "50px";
+                this.imgNode.style.color = "green";
+                mainobj.appendChild(this.imgNode);
+            }
+            this.init();
+            this.moveLeft = function () {
+                if (this.imgNode.style.left == "-50px") {
+                    this.imgNode.style.left = '450px';
+                } else {
+                    this.imgNode.style.left = parseInt(this.imgNode.style.left) - this.speed + 'px';
+                }
+            }
+            this.moveRight = function () {
+                if (this.imgNode.style.left == "550px") {
+                    this.imgNode.style.left = '0';
+                } else {
+                    this.imgNode.style.left = parseInt(this.imgNode.style.left) + this.speed + 'px';
+                }
+
+            }
+            this.moveUp = function () {
+                if (this.imgNode.style.top == '0px') {
+                    this.imgNode.style.top = '0px'
+                } else {
+                    this.imgNode.style.top = parseInt(this.imgNode.style.top) - this.speed + 'px';
+                }
+            }
+            this.moveDown = function () {
+                if (this.imgNode.style.top == '550px') {
+                    this.imgNode.style.top = '550px';
+                } else {
+                    this.imgNode.style.top = parseInt(this.imgNode.style.top) + this.speed + 'px';
+                }
+
+            }
+            this.shoot = function () {
+                //发射子弹
+                var newBullet = new bulleProto("&#xe67e;", parseInt(this.imgNode.style.left) + 20, parseInt(this.imgNode.style.top) - 20, 10);
+                bulletArray.push(newBullet);
+            }
+        }
+        //控制飞机不卡顿
+        function ctrlPlay() {
+            if (leftBtn == true) {
+                player.moveLeft();
+            }
+            if (rightBtn == true) {
+                player.moveRight();
+            }
+            if (upBtn == true) {
+                player.moveUp();
+            }
+            if (downBtn == true) {
+                player.moveDown();
+            }
+        }
+        //监听body中的onkeydowm事件，玩家飞机的移动
+        document.body.onkeydown = function () {
+            //可以为函数传递e,作为事件对象调用，也可以像下面这样
+            var e = window.event || arguments[0];
+            if (e.keyCode == 37) {
+                document.getElementsByClassName("audio")[0].play();
+                player.moveLeft();
+                leftBtn = true;
+                rightBtn = false;
+            }
+            if (e.keyCode == 38) {
+                document.getElementsByClassName("audio")[0].play();
+                player.moveUp();
+                upBtn = true;
+                downBtn = false;
+            }
+            if (e.keyCode == 39) {
+                document.getElementsByClassName("audio")[0].play();
+                player.moveRight();
+                rightBtn = true;
+                leftBtn = false;
+            }
+            if (e.keyCode == 40) {
+                document.getElementsByClassName("audio")[0].play();
+                player.moveDown();
+                downBtn = true;
+                upBtn = false;
+            }
+            if (e.keyCode == 32) {
+                document.getElementsByClassName("audio")[0].play();
+                player.shoot();
+            }
+            //监听一个暂停键 alt
+            if(e.keyCode == 18){
+                ctrlopen_close();
+            }
+        }
+        
+        //创建子弹
+        function bulleProto(bulleClassName, x, y, speed) {
+            this.imgNode = document.createElement('span');
+            this.imgNode.innerHTML = bulleClassName;
+            this.x = x;
+            this.y = y;
+            this.speed = speed;
+            this.init = function () {
+                this.imgNode.setAttribute('class', 'icon iconfont');
+                this.imgNode.style.position = "absolute";
+                this.imgNode.style.left = this.x + 'px';
+                this.imgNode.style.top = this.y + 'px';
+                this.imgNode.style.fontSize = '8px';
+                mainobj.appendChild(this.imgNode);
+            }
+            this.init();
+            this.move = function () {
+                this.imgNode.style.top = parseInt(this.imgNode.style.top) - this.speed + 'px';
+            }
+        }
+        //子弹的移动
+        function bulletMove() {
+            for (let i = 0; i < bulletArray.length; i++) {
+                bulletArray[i].move();
+                if (parseInt(bulletArray[i].imgNode.style.top) <= 20) {
+                    mainobj.removeChild(bulletArray[i].imgNode);//数组中的对象的属性是节点
+                    bulletArray.splice(i, 1);
+                }
+            }
+        }
+        //子弹碰撞小飞机函数
+        function crashCheck() {
+            for (let i = 0; i < smallplaneArray.length; i++) {
+                for (let j = 0; j < bulletArray.length; j++) {
+                    //子弹左坐标
+                    var btleft = parseInt(bulletArray[j].imgNode.style.left);
+                    //子弹顶坐标
+                    var bttop = parseInt(bulletArray[j].imgNode.style.top);
+                    //飞机顶部坐标
+                    var planetop = parseInt(smallplaneArray[i].imgNode.style.top);
+                    //飞机左坐标
+                    var planeleft = parseInt(smallplaneArray[i].imgNode.style.left);
+                    if (smallplaneArray[i].isDead == false) {
+                        if (btleft >= planeleft && btleft <= planeleft + 20 && bttop >= planetop && bttop <= planetop + 20) {
+                            // console.log("碰撞了"); 
+                            mainobj.removeChild(bulletArray[j].imgNode);
+                            bulletArray.splice(j, 1);
+                            smallplaneArray[i].imgNode.innerHTML = "&#xe701;";
+                            smallplaneArray[i].isDead = true;
+                            //杀敌计分
+                            killNum.innerHTML = parseInt(killNum.innerHTML) + 1;
+                            killScore.innerHTML = parseInt(killScore.innerHTML) + 3;
+                        }
+                    }
+                }
+            }
+        }
+
+        //暂停游戏
+        function ctrlopen_close() {
+            document.getElementById("wrap").style.display = "block";
+            document.getElementsByClassName("audio")[0].pause();
+            clearInterval(smallplaneTimer);
+            clearInterval(planeMoverTimer);
+            clearInterval(bulletMoverTimer);
+            clearInterval(crashcheckTimer);
+            clearInterval(ctrlplayTimer);
+        }
+        //继续游戏
+        function btncontinue() {
+            document.getElementById("wrap").style.display = "none";
+            smallplaneTimer = setInterval(creatSmallPlane, 1000);
+            planeMoverTimer = setInterval(smallPlaneMove, 100);
+            bulletMoverTimer = setInterval(bulletMove, 100);
+            crashcheckTimer = setInterval(crashCheck, 50);
+            ctrlplayTimer = setInterval(ctrlPlay, 50)
+        }
+        //新游戏
+        function btnnew() {
+            document.getElementById("wrap").style.display = "none";
+            //移除所有敌方飞机和子弹 玩家飞机
+            mainobj.removeChild(player.imgNode);
+            player = null;
+
+            for (let i = 0; i < smallplaneArray.length; i++) {
+                mainobj.removeChild(smallplaneArray[i].imgNode);
+            }
+            smallplaneArray.splice(0, smallplaneArray.length);
+
+            for (let i = 0; i < bulletArray.length; i++) {
+                mainobj.removeChild(bulletArray[i].imgNode);
+            }
+            bulletArray.splice(0, bulletArray.length);
+            //分数血量清零
+            killNum.innerHTML = 0;
+            killScore.innerHTML = 0;
+            //重新创建玩家飞机
+            player = new PlayerPlaneProto("&#xe610;", 180, 530, 10);
+            //重新调用定时器
+            smallplaneTimer = setInterval(creatSmallPlane, 1000);
+            planeMoverTimer = setInterval(smallPlaneMove, 100);
+            bulletMoverTimer = setInterval(bulletMove, 100);
+            crashcheckTimer = setInterval(crashCheck, 50);
+            ctrlplayTimer = setInterval(ctrlPlay, 50)
+        }
+        //退出游戏
+        function btnclose(){
+            alert("thanks！")
+        }
+    </script>
+</body>
+
+</html>
